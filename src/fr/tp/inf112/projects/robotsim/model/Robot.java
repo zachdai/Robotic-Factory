@@ -35,6 +35,8 @@ public class Robot extends Component {
 	private transient boolean blocked;
 
 	private Position blockedTargetPosition;
+
+	private transient boolean avoidingLivelock;
 	
 	private FactoryPathFinder pathFinder;
 
@@ -55,6 +57,7 @@ public class Robot extends Component {
 		speed = 5;
 		setBlocked(false);
 		blockedTargetPosition = null;
+		avoidingLivelock = false;
 	}
 
 	@Override
@@ -129,14 +132,92 @@ public class Robot extends Component {
 		return targetComponentsIterator.hasNext() ? targetComponentsIterator.next() : null;
 	}
 	
+	public boolean isLivelyLocked() {
+		final Position blockedPosition = getBlockedTargetPosition();
+		if (blockedPosition == null) {
+			return false;
+		}
+		final Component otherRobot = getFactory().getMobileComponentAt(blockedPosition, this);
+		return otherRobot instanceof Robot && getPosition().equals(((Robot) otherRobot).getBlockedTargetPosition());
+	}
+	
 	private int moveToNextPathPosition() {
 		final Motion motion = computeMotion();
+		int displacement = motion == null ? 0 : motion.moveToTarget();
 		
-		final int displacement = motion == null ? 0 : motion.moveToTarget();
+		if (displacement != 0) {
+			notifyObservers();
+		}
+		else if (!avoidingLivelock && isLivelyLocked()) {
+			final Position freeNeighbouringPosition = findFreeNeighbouringPosition();
 			
-		notifyObservers();
+			if (freeNeighbouringPosition != null) {
+				avoidingLivelock = true;
+				
+				try {
+					blockedTargetPosition = freeNeighbouringPosition;
+					displacement = moveToNextPathPosition();
+				}
+				finally {
+					avoidingLivelock = false;
+				}
+				
+				computePathToCurrentTargetComponent();
+			}
+		}
 		
 		return displacement;
+	}
+	
+	private Position findFreeNeighbouringPosition() {
+		final Position currentPosition = getPosition();
+		final Position blockedPosition = getBlockedTargetPosition();
+		final int step = getFactory().getPathResolution();
+		
+		int xDirection = 0;
+		int yDirection = 0;
+		
+		if (blockedPosition != null) {
+			xDirection = Integer.signum(blockedPosition.getxCoordinate() - currentPosition.getxCoordinate());
+			yDirection = Integer.signum(blockedPosition.getyCoordinate() - currentPosition.getyCoordinate());
+		}
+		
+		final int[][] candidateDirections;
+		
+		if (xDirection != 0) {
+			candidateDirections = new int[][] { { 0, 1 }, { 0, -1 }, { -xDirection, 0 } };
+		}
+		else if (yDirection != 0) {
+			candidateDirections = new int[][] { { 1, 0 }, { -1, 0 }, { 0, -yDirection } };
+		}
+		else {
+			candidateDirections = new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+		}
+		
+		for (final int[] candidateDirection : candidateDirections) {
+			final int xCandidate = currentPosition.getxCoordinate() + candidateDirection[0] * step;
+			final int yCandidate = currentPosition.getyCoordinate() + candidateDirection[1] * step;
+			
+			if (isFreePosition(xCandidate, yCandidate)) {
+				return new Position(xCandidate, yCandidate);
+			}
+		}
+		
+		return null;
+	}
+	
+	private boolean isFreePosition(final int xCoordinate,
+								   final int yCoordinate) {
+		final Factory factory = getFactory();
+		
+		if (xCoordinate < 0 || yCoordinate < 0 ||
+			xCoordinate + 2 > factory.getWidth() || yCoordinate + 2 > factory.getHeight()) {
+			return false;
+		}
+		
+		final PositionedShape shape = new RectangularShape(xCoordinate, yCoordinate, 2, 2);
+		
+		return !factory.hasObstacleAt(shape) && !factory.hasMobileComponentAt(shape, this);
 	}
 	
 	private void computePathToCurrentTargetComponent() {
