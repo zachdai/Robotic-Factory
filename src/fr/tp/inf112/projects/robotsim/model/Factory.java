@@ -3,6 +3,9 @@ package fr.tp.inf112.projects.robotsim.model;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import fr.tp.inf112.projects.robotsim.model.motion.Motion;
 
 import fr.tp.inf112.projects.canvas.controller.Observable;
 import fr.tp.inf112.projects.canvas.controller.Observer;
@@ -22,8 +25,10 @@ public class Factory extends Component implements Canvas, Observable {
 
 	private transient List<Observer> observers;
 
-	private transient boolean simulationStarted;
-	
+	private transient volatile boolean simulationStarted;
+
+	private transient List<Thread> componentThreads;
+
 	private int pathResolution;
 
 	public Factory(final int width,
@@ -40,10 +45,18 @@ public class Factory extends Component implements Canvas, Observable {
 	
 	protected List<Observer> getObservers() {
 		if (observers == null) {
-			observers = new ArrayList<>();
+			observers = new CopyOnWriteArrayList<>();
 		}
-		
+
 		return observers;
+	}
+
+	protected List<Thread> getComponentThreads() {
+		if (componentThreads == null) {
+			componentThreads = new ArrayList<>();
+		}
+
+		return componentThreads;
 	}
 
 	@Override
@@ -114,38 +127,53 @@ public class Factory extends Component implements Canvas, Observable {
 			this.simulationStarted = true;
 			notifyObservers();
 
-			while (isSimulationStarted()) {
-				behave();
-				
-				try {
-					Thread.sleep(100);
-				}
-				catch (final InterruptedException ex) {
-					System.err.println("Simulation was abruptly interrupted");
-				}
-			}
+			behave();
 		}
 	}
 
 	public void stopSimulation() {
 		if (isSimulationStarted()) {
 			this.simulationStarted = false;
-			
+
+			for (final Thread componentThread : getComponentThreads()) {
+				componentThread.interrupt();
+			}
+
+			getComponentThreads().clear();
+
 			notifyObservers();
 		}
 	}
 
 	@Override
 	public boolean behave() {
-		boolean behaved = false;
-		
-		for (final Component component : getComponents()) {
-			
-			// Return true as soon as at least on of the components did behave
-			behaved = component.behave() || behaved;
+		getComponentThreads().clear();
+
+		for (final Component component : new ArrayList<>(getComponents())) {
+			final Thread componentThread = new Thread(component, component.getName());
+			getComponentThreads().add(componentThread);
+			componentThread.start();
 		}
-		
-		return behaved;
+
+		return !getComponentThreads().isEmpty();
+	}
+
+	public synchronized int moveMobileComponentTo(final Component movingComponent,
+												 final Position targetPosition) {
+		if (targetPosition == null) {
+			return 0;
+		}
+
+		final PositionedShape targetShape = new RectangularShape(targetPosition.getxCoordinate(),
+																targetPosition.getyCoordinate(),
+																2,
+																2);
+
+		if (hasMobileComponentAt(targetShape, movingComponent)) {
+			return 0;
+		}
+
+		return new Motion(movingComponent.getPosition(), targetPosition).moveToTarget();
 	}
 	
 	@Override

@@ -7,7 +7,7 @@ import fr.tp.inf112.projects.canvas.model.Style;
 import fr.tp.inf112.projects.robotsim.model.shapes.PositionedShape;
 import fr.tp.inf112.projects.canvas.model.Shape;
 
-public abstract class Component implements Figure, Serializable {
+public abstract class Component implements Figure, Serializable, Runnable {
 	
 	private static final long serialVersionUID = -5960950869184030220L;
 
@@ -105,6 +105,20 @@ public abstract class Component implements Figure, Serializable {
 	
 	public boolean behave() {
 		return false;
+	}
+	
+	@Override
+	public void run() {
+		while (isSimulationStarted()) {
+			behave();
+			
+			try {
+				Thread.sleep(100);
+			}
+			catch (final InterruptedException ex) {
+				return;
+			}
+		}
 	}
 	
 	public boolean isMobile() {
