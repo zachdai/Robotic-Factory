@@ -2,8 +2,11 @@ package fr.tp.inf112.projects.robotsim.app;
 
 import java.awt.Component;
 import java.util.Arrays;
+import java.util.logging.Logger;
 
 import javax.swing.SwingUtilities;
+
+import com.sun.tools.javac.Main;
 
 import fr.tp.inf112.projects.canvas.model.impl.BasicPoint;
 import fr.tp.inf112.projects.canvas.view.CanvasViewer;
@@ -26,11 +29,16 @@ import fr.tp.inf112.projects.robotsim.model.shapes.CircularShape;
 import fr.tp.inf112.projects.robotsim.model.shapes.RectangularShape;
 
 public class SimulatorApplication {
+//	private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
+	private static final Logger LOGGER =
+	        Logger.getLogger(SimulatorApplication.class.getName());
 
 	public static void main(String[] args) {
-		System.out.println("Starting the robot simulator...");
-		
-		System.out.println("With parameters " + Arrays.toString(args) + ".");
+		LOGGER.info("Starting the robot simulator...");
+		LOGGER.config("With parameters " + Arrays.toString(args) + ".");
+//		System.out.println("Starting the robot simulator...");
+//		
+//		System.out.println("With parameters " + Arrays.toString(args) + ".");
 		
 		final Factory factory = new Factory(200, 200, "Simple Test Puck Factory", 5);
 		final Room room1 = new Room(factory, new RectangularShape(20, 20, 75, 75), "Production Room 1");
