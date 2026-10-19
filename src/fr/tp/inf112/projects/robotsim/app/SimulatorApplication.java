@@ -19,6 +19,7 @@ import fr.tp.inf112.projects.robotsim.model.Door;
 import fr.tp.inf112.projects.robotsim.model.Factory;
 import fr.tp.inf112.projects.robotsim.model.FactoryPersistenceManager;
 import fr.tp.inf112.projects.robotsim.model.Machine;
+import fr.tp.inf112.projects.robotsim.model.RemoteFactoryPersistenceManager;
 import fr.tp.inf112.projects.robotsim.model.Robot;
 import fr.tp.inf112.projects.robotsim.model.Room;
 import fr.tp.inf112.projects.robotsim.model.path.CustomDijkstraFactoryPathFinder;
@@ -27,6 +28,7 @@ import fr.tp.inf112.projects.robotsim.model.path.JGraphTDijkstraFactoryPathFinde
 import fr.tp.inf112.projects.robotsim.model.shapes.BasicPolygonShape;
 import fr.tp.inf112.projects.robotsim.model.shapes.CircularShape;
 import fr.tp.inf112.projects.robotsim.model.shapes.RectangularShape;
+import fr.tp.inf112.projects.robotsim.net.PersistenceProtocol;
 
 public class SimulatorApplication {
 //	private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
@@ -90,8 +92,16 @@ public class SimulatorApplication {
 			  
 			@Override
 	        public void run() {
-				final FileCanvasChooser canvasChooser = new FileCanvasChooser("factory", "Puck Factory");
-				final Component factoryViewer = new CanvasViewer(new SimulatorController(factory, new FactoryPersistenceManager(canvasChooser)));
+				final RemoteFileCanvasChooser canvasChooser = new RemoteFileCanvasChooser(
+						PersistenceProtocol.DEFAULT_HOST,
+						PersistenceProtocol.DEFAULT_PORT);
+				final RemoteFactoryPersistenceManager persistenceManager =
+						new RemoteFactoryPersistenceManager(
+								canvasChooser,
+								PersistenceProtocol.DEFAULT_HOST,
+								PersistenceProtocol.DEFAULT_PORT);
+				final Component factoryViewer = new CanvasViewer(
+						new SimulatorController(factory, persistenceManager));
 				canvasChooser.setViewer(factoryViewer);
 				//new CanvasViewer(factory);
 			}

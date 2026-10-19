@@ -27,13 +27,13 @@ public class Robot extends Component {
 	
 	private transient Iterator<Component> targetComponentsIterator;
 	
-	private Component currTargetComponent;
+	private transient Component currTargetComponent;
 	
 	private transient Iterator<Position> currentPathPositionsIter;
 	
 	private transient volatile boolean blocked;
 
-	private volatile Position blockedTargetPosition;
+	private transient volatile Position blockedTargetPosition;
 
 	private transient boolean steppingAside;
 	
