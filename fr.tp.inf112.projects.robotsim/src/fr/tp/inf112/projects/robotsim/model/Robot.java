@@ -3,6 +3,9 @@ package fr.tp.inf112.projects.robotsim.model;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import fr.tp.inf112.projects.robotsim.model.path.CustomDijkstraFactoryPathFinder;
 
 import fr.tp.inf112.projects.canvas.model.Style;
 import fr.tp.inf112.projects.canvas.model.impl.RGBColor;
@@ -19,10 +22,13 @@ public class Robot extends Component {
 
 	private static final Style BLOCKED_STYLE = new ComponentStyle(RGBColor.RED, RGBColor.BLACK, 3.0f, new float[]{4.0f});
 
+	@JsonProperty
 	private final Battery battery;
 	
+	@JsonProperty
 	private int speed;
 	
+	@JsonProperty
 	private List<Component> targetComponents;
 	
 	private transient Iterator<Component> targetComponentsIterator;
@@ -37,6 +43,7 @@ public class Robot extends Component {
 
 	private transient boolean steppingAside;
 	
+	@JsonIgnore
 	private FactoryPathFinder pathFinder;
 
 	public Robot(final Factory factory,
@@ -59,6 +66,16 @@ public class Robot extends Component {
 		steppingAside = false;
 	}
 
+	public Robot() {
+		super();
+		battery = new Battery();
+		targetComponents = new ArrayList<>();
+		pathFinder = null;
+		speed = 0;
+		blocked = false;
+		steppingAside = false;
+	}
+
 	@Override
 	public String toString() {
 		return super.toString() + " battery=" + battery + "]";
@@ -72,16 +89,21 @@ public class Robot extends Component {
 		this.speed = speed;
 	}
 	
+	@JsonIgnore
 	public Position getBlockedTargetPosition() {
 		return blockedTargetPosition;
 	}
 	
-	private List<Component> getTargetComponents() {
+	public List<Component> getTargetComponents() {
 		if (targetComponents == null) {
 			targetComponents = new ArrayList<>();
 		}
 		
 		return targetComponents;
+	}
+
+	public Battery getBattery() {
+		return battery;
 	}
 	
 	public boolean addTargetComponent(final Component targetComponent) {
@@ -97,6 +119,7 @@ public class Robot extends Component {
 		return true;
 	}
 	
+	@JsonIgnore
 	public boolean isBlocked() {
 		return blocked;
 	}
@@ -375,6 +398,9 @@ public class Robot extends Component {
 	}
 	
 	private void computePathToCurrentTargetComponent() {
+		if (pathFinder == null) {
+			pathFinder = new CustomDijkstraFactoryPathFinder(getFactory(), getFactory().getPathResolution());
+		}
 		final List<Position> currentPathPositions = pathFinder.findPath(this, currTargetComponent);
 		currentPathPositionsIter = currentPathPositions.iterator();
 	}

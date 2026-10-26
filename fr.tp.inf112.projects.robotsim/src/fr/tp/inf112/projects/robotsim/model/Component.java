@@ -1,22 +1,33 @@
 package fr.tp.inf112.projects.robotsim.model;
 
 import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import fr.tp.inf112.projects.canvas.model.Figure;
 import fr.tp.inf112.projects.canvas.model.Style;
 import fr.tp.inf112.projects.robotsim.model.shapes.PositionedShape;
 import fr.tp.inf112.projects.canvas.model.Shape;
 
+@JsonIgnoreProperties({"style", "shape", "position", "xCoordinate", "yCoordinate", "width", "height", "mobile", "simulationStarted"})
+@JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator.class, property = "@id")
 public abstract class Component implements Figure, Serializable, Runnable {
 	
 	private static final long serialVersionUID = -5960950869184030220L;
 
 	private String id;
 
+	@JsonBackReference
 	private final Factory factory;
 	
+	@JsonProperty
 	private final PositionedShape positionedShape;
 	
+	@JsonProperty
 	private final String name;
 
 	protected Component(final Factory factory,
@@ -29,6 +40,11 @@ public abstract class Component implements Figure, Serializable, Runnable {
 		if (factory != null) {
 			factory.addComponent(this);
 		}
+	}
+
+	/** Constructor used by Jackson when recreating a component. */
+	protected Component() {
+		this(null, null, null);
 	}
 	
 	public String getId() {
@@ -43,8 +59,9 @@ public abstract class Component implements Figure, Serializable, Runnable {
 		return positionedShape;
 	}
 	
+	@JsonIgnore
 	public Position getPosition() {
-		return getPositionedShape().getPosition();
+		return getPositionedShape() == null ? null : getPositionedShape().getPosition();
 	}
 
 	protected Factory getFactory() {
@@ -52,8 +69,9 @@ public abstract class Component implements Figure, Serializable, Runnable {
 	}
 
 	@Override
+	@JsonIgnore
 	public int getxCoordinate() {
-		return getPositionedShape().getxCoordinate();
+		return getPositionedShape() == null ? -1 : getPositionedShape().getxCoordinate();
 	}
 
 	protected boolean setxCoordinate(int xCoordinate) {
@@ -67,8 +85,9 @@ public abstract class Component implements Figure, Serializable, Runnable {
 	}
 
 	@Override
+	@JsonIgnore
 	public int getyCoordinate() {
-		return getPositionedShape().getyCoordinate();
+		return getPositionedShape() == null ? -1 : getPositionedShape().getyCoordinate();
 	}
 
 	protected boolean setyCoordinate(final int yCoordinate) {
@@ -95,12 +114,14 @@ public abstract class Component implements Figure, Serializable, Runnable {
 				+ ", shape=" + getPositionedShape();
 	}
 
+	@JsonIgnore
 	public int getWidth() {
-		return getPositionedShape().getWidth();
+		return getPositionedShape() == null ? 0 : getPositionedShape().getWidth();
 	}
 
+	@JsonIgnore
 	public int getHeight() {
-		return getPositionedShape().getHeight();
+		return getPositionedShape() == null ? 0 : getPositionedShape().getHeight();
 	}
 	
 	public boolean behave() {
@@ -130,7 +151,7 @@ public abstract class Component implements Figure, Serializable, Runnable {
 	}
 	
 	public boolean overlays(final PositionedShape shape) {
-		return getPositionedShape().overlays(shape);
+		return getPositionedShape() != null && shape != null && getPositionedShape().overlays(shape);
 	}
 	
 	public boolean canBeOverlayed(final PositionedShape shape) {
@@ -143,10 +164,12 @@ public abstract class Component implements Figure, Serializable, Runnable {
 	}
 	
 	@Override
+	@JsonIgnore
 	public Shape getShape() {
 		return getPositionedShape();
 	}
 	
+	@JsonIgnore
 	public boolean isSimulationStarted() {
 		return getFactory().isSimulationStarted();
 	}

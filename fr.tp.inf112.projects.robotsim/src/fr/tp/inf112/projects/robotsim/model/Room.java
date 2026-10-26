@@ -2,6 +2,7 @@ package fr.tp.inf112.projects.robotsim.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import fr.tp.inf112.projects.robotsim.model.shapes.PositionedShape;
 import fr.tp.inf112.projects.robotsim.model.shapes.RectangularShape;
@@ -14,13 +15,13 @@ public class Room extends Component {
 	
 	private static final int WALL_THICKNESS = 5;
 	
-	private final PositionedShape leftWall;
+	private PositionedShape leftWall;
 	
-	private final PositionedShape rightWall;
+	private PositionedShape rightWall;
 	
-	private final PositionedShape topWall;
+	private PositionedShape topWall;
 	
-	private final PositionedShape bottomWall;
+	private PositionedShape bottomWall;
 	
 	private final List<Area> areas;
 
@@ -39,6 +40,13 @@ public class Room extends Component {
 		areas = new ArrayList<>();
 		doors = new ArrayList<>();
 	}
+
+	public Room() {
+		super();
+		leftWall = rightWall = topWall = bottomWall = null;
+		areas = new ArrayList<>();
+		doors = new ArrayList<>();
+	}
 	
 	protected boolean addArea(final Area area) {
 		return areas.add(area);
@@ -48,22 +56,38 @@ public class Room extends Component {
 		return doors.add(door);
 	}
 	
+	@JsonIgnore
 	public List<Area> getAreas() {
 		return areas;
 	}
 
+	private void ensureWalls() {
+		if (leftWall != null || getPositionedShape() == null) {
+			return;
+		}
+		leftWall = new RectangularShape(getxCoordinate(), getyCoordinate(), WALL_THICKNESS, getHeight() + WALL_THICKNESS);
+		rightWall = new RectangularShape(getxCoordinate() + getWidth(), getyCoordinate(), WALL_THICKNESS, getHeight() + WALL_THICKNESS);
+		topWall = new RectangularShape(getxCoordinate(), getyCoordinate(), getWidth(), WALL_THICKNESS);
+		bottomWall = new RectangularShape(getxCoordinate(), getyCoordinate() + getHeight(), getWidth(), WALL_THICKNESS);
+	}
+
+	@JsonIgnore
 	public List<Door> getDoors() {
 		return doors;
 	}
 
 	@Override
 	public boolean overlays(final PositionedShape shape) {
+		ensureWalls();
+		if (leftWall == null || shape == null) return false;
 		return leftWall.overlays(shape) || rightWall.overlays(shape) || 
 			   topWall.overlays(shape) || bottomWall.overlays(shape);
 	}
 
 	@Override
 	public boolean canBeOverlayed(final PositionedShape shape) {
+		ensureWalls();
+		if (leftWall == null || shape == null) return true;
 		final Door overlayedDoor = getOverlayedDoor(shape);
 		
 		if (overlayedDoor != null) {

@@ -32,6 +32,8 @@ public class Door extends Component {
 			}
 		}
 	}
+
+	public Door() { super(); this.room = null; }
 	
 	private static int computeyCoordinate(final Room room,
 										  final Room.WALL wall,
@@ -95,7 +97,7 @@ public class Door extends Component {
 		return isOpen() ? OPEN_STYLE : ComponentStyle.DEFAULT_BLACK;
 	}
 
-	private boolean isOpen() {
+	public boolean isOpen() {
 		return open;
 	}
 

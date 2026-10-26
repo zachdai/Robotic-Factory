@@ -1,11 +1,13 @@
 package fr.tp.inf112.projects.robotsim.model.shapes;
 
 import fr.tp.inf112.projects.canvas.model.OvalShape;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class CircularShape extends PositionedShape implements OvalShape {
 	
 	private static final long serialVersionUID = -1912941556210518344L;
 
+	@JsonProperty
 	private final int radius;
 	
 	public CircularShape( 	final int xCoordinate,
@@ -15,6 +17,8 @@ public class CircularShape extends PositionedShape implements OvalShape {
 		
 		this.radius = radius;
 	}
+
+	public CircularShape() { this(0, 0, 0); }
 
 	@Override
 	public int getWidth() {

@@ -15,6 +15,8 @@ public class ChargingStation extends Component {
 		this(room.getFactory(), shape, name);
 	}
 
+	public ChargingStation() { super(); }
+
 	public ChargingStation(final Factory factory,
 						   final RectangularShape shape,
 						   final String name) {

@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import fr.tp.inf112.projects.robotsim.model.motion.Motion;
 
@@ -21,14 +24,18 @@ public class Factory extends Component implements Canvas, Observable {
 	
 	private static final ComponentStyle DEFAULT = new ComponentStyle(5.0f);
 
+    @JsonManagedReference
+    @JsonProperty
     private final List<Component> components;
 
 	private transient List<Observer> observers;
 
+	@JsonIgnore
 	private transient volatile boolean simulationStarted;
 
 	private transient List<Thread> componentThreads;
 
+	@JsonProperty
 	private int pathResolution;
 
 	public Factory(final int width,
@@ -42,8 +49,13 @@ public class Factory extends Component implements Canvas, Observable {
 		observers = null;
 		simulationStarted = false;
 	}
+
+	public Factory() {
+		this(0, 0, null, 1);
+	}
 	
-	protected List<Observer> getObservers() {
+	@JsonIgnore
+	public List<Observer> getObservers() {
 		if (observers == null) {
 			observers = new CopyOnWriteArrayList<>();
 		}
@@ -51,6 +63,7 @@ public class Factory extends Component implements Canvas, Observable {
 		return observers;
 	}
 
+	@JsonIgnore
 	protected List<Thread> getComponentThreads() {
 		if (componentThreads == null) {
 			componentThreads = new ArrayList<>();
@@ -69,7 +82,7 @@ public class Factory extends Component implements Canvas, Observable {
 		return getObservers().remove(observer);
 	}
 	
-	protected void notifyObservers() {
+	public void notifyObservers() {
 		for (final Observer observer : getObservers()) {
 			observer.modelChanged();
 		}
@@ -95,12 +108,14 @@ public class Factory extends Component implements Canvas, Observable {
 		return false;
 	}
 
+	@JsonIgnore
 	protected List<Component> getComponents() {
 		return components;
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
+	@JsonIgnore
 	public Collection<Figure> getFigures() {
 		return (Collection) components;
 	}

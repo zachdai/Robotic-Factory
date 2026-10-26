@@ -2,6 +2,7 @@ package fr.tp.inf112.projects.robotsim.model.shapes;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import fr.tp.inf112.projects.canvas.model.Point;
 import fr.tp.inf112.projects.canvas.model.PolygonShape;
@@ -10,6 +11,7 @@ public class BasicPolygonShape extends PositionedShape implements PolygonShape {
 	
 	private static final long serialVersionUID = -1764316101910546849L;
 
+	@JsonProperty
 	private final Set<Point> points;
 	
 	public BasicPolygonShape() {

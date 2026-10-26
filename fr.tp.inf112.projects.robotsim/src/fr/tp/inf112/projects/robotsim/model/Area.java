@@ -21,6 +21,8 @@ public class Area extends Component {
 		
 		machine = null;
 	}
+
+	public Area() { super(); }
 	
 	protected void setMachine( final Machine machine ) {
 		this.machine = machine;
