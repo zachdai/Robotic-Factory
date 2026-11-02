@@ -29,6 +29,7 @@ import fr.tp.inf112.projects.robotsim.model.shapes.BasicPolygonShape;
 import fr.tp.inf112.projects.robotsim.model.shapes.CircularShape;
 import fr.tp.inf112.projects.robotsim.model.shapes.RectangularShape;
 import fr.tp.inf112.projects.robotsim.net.PersistenceProtocol;
+import fr.tp.inf112.projects.canvas.model.CanvasPersistenceManager;
 
 public class SimulatorApplication {
 //	private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
@@ -87,21 +88,36 @@ public class SimulatorApplication {
 		robot2.addTargetComponent(machine2);
 		robot2.addTargetComponent(chargingStation);
 		robot2.addTargetComponent(conveyor1);
+
+		final String mode = args.length == 0 ? "remote" : args[0];
+		if (!mode.equals("local") && !mode.equals("roundtrip") && !mode.equals("remote")) {
+			throw new IllegalArgumentException("Expected local, roundtrip, or remote mode.");
+		}
+		final Factory displayedFactory;
+		if (mode.equals("roundtrip")) {
+			final var mapper = FactoryJsonMapper.create();
+			displayedFactory = mapper.readValue(mapper.writeValueAsString(factory), Factory.class);
+		}
+		else {
+			displayedFactory = factory;
+		}
 		
 		SwingUtilities.invokeLater(new Runnable() {
 			  
 			@Override
 	        public void run() {
-				final RemoteFileCanvasChooser canvasChooser = new RemoteFileCanvasChooser(
-						PersistenceProtocol.DEFAULT_HOST,
-						PersistenceProtocol.DEFAULT_PORT);
-				final RemoteFactoryPersistenceManager persistenceManager =
-						new RemoteFactoryPersistenceManager(
-								canvasChooser,
-								PersistenceProtocol.DEFAULT_HOST,
-								PersistenceProtocol.DEFAULT_PORT);
+				final FileCanvasChooser canvasChooser = mode.equals("remote")
+						? new RemoteFileCanvasChooser(PersistenceProtocol.DEFAULT_HOST,
+								PersistenceProtocol.DEFAULT_PORT)
+						: new FileCanvasChooser(PersistenceProtocol.FACTORY_FILE_EXTENSION, "Puck Factory");
+				final CanvasPersistenceManager persistenceManager = mode.equals("remote")
+						? new RemoteFactoryPersistenceManager(canvasChooser,
+								PersistenceProtocol.DEFAULT_HOST, PersistenceProtocol.DEFAULT_PORT)
+						: new FactoryPersistenceManager(canvasChooser);
 				final Component factoryViewer = new CanvasViewer(
-						new SimulatorController(factory, persistenceManager));
+						mode.equals("remote")
+								? new RemoteSimulatorController(displayedFactory, persistenceManager)
+								: new SimulatorController(displayedFactory, persistenceManager));
 				canvasChooser.setViewer(factoryViewer);
 				//new CanvasViewer(factory);
 			}

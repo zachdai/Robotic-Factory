@@ -58,6 +58,16 @@ public class Room extends Component {
 	
 	@JsonIgnore
 	public List<Area> getAreas() {
+		if (areas.isEmpty() && getFactory() != null) {
+			for (final Component component : getFactory().getComponents()) {
+				if (component instanceof Area area && area.getxCoordinate() >= getxCoordinate()
+						&& area.getyCoordinate() >= getyCoordinate()
+						&& area.getxCoordinate() + area.getWidth() <= getxCoordinate() + getWidth()
+						&& area.getyCoordinate() + area.getHeight() <= getyCoordinate() + getHeight()) {
+					areas.add(area);
+				}
+			}
+		}
 		return areas;
 	}
 
@@ -73,6 +83,13 @@ public class Room extends Component {
 
 	@JsonIgnore
 	public List<Door> getDoors() {
+		if (doors.isEmpty() && getFactory() != null) {
+			for (final Component component : getFactory().getComponents()) {
+				if (component instanceof Door door && overlays(door.getPositionedShape())) {
+					doors.add(door);
+				}
+			}
+		}
 		return doors;
 	}
 

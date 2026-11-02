@@ -93,6 +93,9 @@ public final class TestRobotSimSerializationJSON {
         Robot copiedRobot = (Robot) roundTrip.getFigures().stream().filter(c -> c instanceof Robot).findFirst().orElseThrow();
         Door copiedDoor = (Door) roundTrip.getFigures().stream().filter(c -> c instanceof Door).findFirst().orElseThrow();
         assertTrue(copiedDoor.isOpen());
+        Room copiedRoom = (Room) roundTrip.getFigures().stream().filter(c -> c instanceof Room).findFirst().orElseThrow();
+        assertEquals(1, copiedRoom.getDoors().size());
+        assertEquals(1, copiedRoom.getAreas().size());
         assertEquals(1, copiedRobot.getTargetComponents().size());
         assertSame(roundTrip.getFigures().stream().filter(c -> c instanceof Machine).findFirst().orElseThrow(),
                 copiedRobot.getTargetComponents().get(0));
