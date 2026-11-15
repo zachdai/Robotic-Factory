@@ -6,7 +6,6 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -14,6 +13,7 @@ import fr.tp.inf112.projects.canvas.controller.Observer;
 import fr.tp.inf112.projects.canvas.model.Canvas;
 import fr.tp.inf112.projects.canvas.model.CanvasPersistenceManager;
 import fr.tp.inf112.projects.robotsim.model.Factory;
+import fr.tp.inf112.projects.robotsim.model.LocalFactoryModelChangedNotifier;
 import tools.jackson.databind.ObjectMapper;
 
 public class RemoteSimulatorController extends SimulatorController {
@@ -22,9 +22,10 @@ public class RemoteSimulatorController extends SimulatorController {
 
 	private final HttpClient httpClient = HttpClient.newHttpClient();
 	private final ObjectMapper objectMapper = FactoryJsonMapper.create();
+	private final LocalFactoryModelChangedNotifier notifier = new LocalFactoryModelChangedNotifier();
 	private volatile boolean animationRunning;
-	private Thread updateThread;
 	private String activeFactoryId;
+	private FactorySimulationEventConsumer eventConsumer;
 
 	public RemoteSimulatorController(final Factory factoryModel,
 								 final CanvasPersistenceManager persistenceManager) {
@@ -36,6 +37,7 @@ public class RemoteSimulatorController extends SimulatorController {
 		if (animationRunning) {
 			return;
 		}
+		FactorySimulationEventConsumer consumer = null;
 		try {
 			if (getCanvas().getId() == null) {
 				final String newId = getPersistenceManager().getCanvasChooser().newCanvasId();
@@ -46,19 +48,44 @@ public class RemoteSimulatorController extends SimulatorController {
 				getPersistenceManager().persist(getCanvas());
 			}
 			final String factoryId = getCanvas().getId();
+			consumer = new FactorySimulationEventConsumer(this);
+			final FactorySimulationEventConsumer activeConsumer = consumer;
+			final Thread consumerThread = new Thread(
+						() -> {
+							try {
+								activeConsumer.consumeMessages();
+							}
+							catch (final RuntimeException exception) {
+								LOGGER.log(Level.SEVERE, "Could not consume simulation events", exception);
+							}
+						});
+			consumerThread.setDaemon(true);
+			consumerThread.start();
+			consumer.awaitAssignment();
 			if (post(factoryId, "start")) {
 				animationRunning = true;
 				activeFactoryId = factoryId;
-				updateThread = new Thread(() -> updateViewer(factoryId));
-				updateThread.setDaemon(true);
-				updateThread.start();
+				eventConsumer = consumer;
+				consumer.start();
+			}
+			else {
+				consumer.stop();
 			}
 		}
 		catch (final IOException | InterruptedException exception) {
+			if (consumer != null) {
+				consumer.stop();
+			}
 			LOGGER.log(Level.WARNING, "Could not start remote simulation", exception);
 			if (exception instanceof InterruptedException) {
 				Thread.currentThread().interrupt();
 			}
+		}
+		catch (final RuntimeException exception) {
+			if (consumer != null) {
+				consumer.stop();
+			}
+			LOGGER.log(Level.WARNING, "Could not start remote simulation", exception);
 		}
 	}
 
@@ -72,8 +99,9 @@ public class RemoteSimulatorController extends SimulatorController {
 			if (post(factoryId, "stop")) {
 				animationRunning = false;
 				activeFactoryId = null;
-				updateThread.interrupt();
-				setCanvas(getFactory(factoryId));
+				eventConsumer.stop();
+				eventConsumer = null;
+				updateCanvas(getFactory(factoryId));
 			}
 		}
 		catch (final IOException | InterruptedException exception) {
@@ -90,37 +118,50 @@ public class RemoteSimulatorController extends SimulatorController {
 	}
 
 	@Override
-	public synchronized void setCanvas(final Canvas canvasModel) {
-		final Factory oldFactory = (Factory) getCanvas();
-		final List<Observer> observers = oldFactory == null ? List.of() : List.copyOf(oldFactory.getObservers());
-		super.setCanvas(canvasModel);
-		final Factory newFactory = (Factory) getCanvas();
-		for (final Observer observer : observers) {
-			newFactory.addObserver(observer);
-		}
-		newFactory.notifyObservers();
+	public boolean addObserver(final Observer observer) {
+		return notifier.addObserver(observer);
 	}
 
-	private void updateViewer(final String factoryId) {
-		while (animationRunning) {
+	@Override
+	public boolean removeObserver(final Observer observer) {
+		return notifier.removeObserver(observer);
+	}
+
+	@Override
+	public synchronized void setCanvas(final Canvas canvasModel) {
+		if (animationRunning) {
+			stopAnimation();
+		}
+		Canvas displayed = canvasModel;
+		if (canvasModel != null && canvasModel.getId() != null) {
 			try {
-				final Factory factory = getFactory(factoryId);
-				synchronized (this) {
-					if (!animationRunning) {
-						return;
-					}
-					setCanvas(factory);
+				final Factory current = getFactory(canvasModel.getId());
+				if (current != null) {
+					displayed = current;
 				}
-				Thread.sleep(100);
 			}
-			catch (final InterruptedException exception) {
-				Thread.currentThread().interrupt();
-				return;
+			catch (final IOException | InterruptedException exception) {
+				LOGGER.log(Level.WARNING, "Could not load current remote factory", exception);
+				if (exception instanceof InterruptedException) {
+					Thread.currentThread().interrupt();
+				}
 			}
-			catch (final IOException exception) {
-				LOGGER.log(Level.WARNING, "Could not refresh remote factory", exception);
-				return;
-			}
+		}
+		updateCanvas(displayed);
+	}
+
+	private void updateCanvas(final Canvas canvasModel) {
+		super.setCanvas(canvasModel);
+		notifier.notifyObservers();
+	}
+
+	public synchronized void setCanvas(final String factoryJson) {
+		if (!animationRunning) {
+			return;
+		}
+		final Factory factory = objectMapper.readValue(factoryJson, Factory.class);
+		if (factory.getId().equals(activeFactoryId)) {
+			updateCanvas(factory);
 		}
 	}
 
@@ -138,6 +179,9 @@ public class RemoteSimulatorController extends SimulatorController {
 	private Factory getFactory(final String factoryId) throws IOException, InterruptedException {
 		final HttpRequest request = HttpRequest.newBuilder(uri(factoryId, "")).GET().build();
 		final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+		if (response.statusCode() == 404) {
+			return null;
+		}
 		if (response.statusCode() != 200) {
 			throw new IOException("Simulation service returned HTTP " + response.statusCode());
 		}

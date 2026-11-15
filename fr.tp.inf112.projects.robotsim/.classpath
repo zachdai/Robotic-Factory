@@ -13,6 +13,8 @@
 	<classpathentry kind="lib" path="/Users/tzzte/.m2/repository/tools/jackson/core/jackson-databind/3.1.5/jackson-databind-3.1.5.jar"/>
 	<classpathentry kind="lib" path="/Users/tzzte/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.21/jackson-annotations-2.21.jar"/>
 	<classpathentry kind="lib" path="/Users/tzzte/.m2/repository/tools/jackson/core/jackson-core/3.1.5/jackson-core-3.1.5.jar"/>
+	<classpathentry kind="lib" path="/Users/tzzte/.m2/repository/org/apache/kafka/kafka-clients/4.2.1/kafka-clients-4.2.1.jar"/>
+	<classpathentry kind="lib" path="libs/jgrapht/lib/slf4j-api-2.0.3.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

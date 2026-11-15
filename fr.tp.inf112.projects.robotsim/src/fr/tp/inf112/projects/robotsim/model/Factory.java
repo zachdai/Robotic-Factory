@@ -3,7 +3,6 @@ package fr.tp.inf112.projects.robotsim.model;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -28,7 +27,8 @@ public class Factory extends Component implements Canvas, Observable {
     @JsonProperty
     private final List<Component> components;
 
-	private transient List<Observer> observers;
+	@JsonIgnore
+	private transient FactoryModelChangedNotifier notifier;
 
 	@JsonIgnore
 	private transient volatile boolean simulationStarted;
@@ -46,7 +46,7 @@ public class Factory extends Component implements Canvas, Observable {
 		
 		this.pathResolution = pathResolution;
 		components = new ArrayList<>();
-		observers = null;
+		notifier = new LocalFactoryModelChangedNotifier();
 		simulationStarted = false;
 	}
 
@@ -56,11 +56,19 @@ public class Factory extends Component implements Canvas, Observable {
 	
 	@JsonIgnore
 	public List<Observer> getObservers() {
-		if (observers == null) {
-			observers = new CopyOnWriteArrayList<>();
-		}
+		return ((LocalFactoryModelChangedNotifier) getNotifier()).getObservers();
+	}
 
-		return observers;
+	@JsonIgnore
+	public FactoryModelChangedNotifier getNotifier() {
+		if (notifier == null) {
+			notifier = new LocalFactoryModelChangedNotifier();
+		}
+		return notifier;
+	}
+
+	public void setNotifier(final FactoryModelChangedNotifier notifier) {
+		this.notifier = notifier;
 	}
 
 	@JsonIgnore
@@ -74,18 +82,16 @@ public class Factory extends Component implements Canvas, Observable {
 
 	@Override
 	public boolean addObserver(Observer observer) {
-		return getObservers().add(observer);
+		return getNotifier().addObserver(observer);
 	}
 
 	@Override
 	public boolean removeObserver(Observer observer) {
-		return getObservers().remove(observer);
+		return getNotifier().removeObserver(observer);
 	}
 	
 	public void notifyObservers() {
-		for (final Observer observer : getObservers()) {
-			observer.modelChanged();
-		}
+		getNotifier().notifyObservers();
 	}
 	
 	public boolean addComponent(final Component component) {

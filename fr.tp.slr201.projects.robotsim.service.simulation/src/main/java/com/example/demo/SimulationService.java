@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import fr.tp.inf112.projects.robotsim.model.Factory;
@@ -21,6 +22,9 @@ public class SimulationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimulationService.class);
 
     private final RemoteFactoryPersistenceManager persistenceManager;
+
+    @Autowired
+    private KafkaTemplate<String, Factory> simulationEventTemplate;
 
     private final Map<String, Factory> factories = new LinkedHashMap<>();
 
@@ -51,6 +55,9 @@ public class SimulationService {
             }
 
             if (!factory.isSimulationStarted()) {
+                if (simulationEventTemplate != null) {
+                    factory.setNotifier(new KafkaFactoryModelChangeNotifier(factory, simulationEventTemplate));
+                }
                 factory.startSimulation();
                 LOGGER.info("Started simulation for factory {}.", factoryId);
             }
